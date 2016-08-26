@@ -1,3 +1,9 @@
 # TODO - PID is currently hard-coded
 
-lldb -o "thread backtrace all" --batch -p 71468
+while :; 
+	do clear; 
+	lldb -o "thread backtrace all" --batch -p 71468
+	sleep 10; 
+done
+
+#watch -n 10 'lldb -o "thread backtrace all" --batch -p 71468'
