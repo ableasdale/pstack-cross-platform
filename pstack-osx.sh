@@ -2,7 +2,7 @@
 
 while :; 
 	do clear; 
-	lldb -o "thread backtrace all" --batch -p 71468
+	lldb -o "thread backtrace all" --batch -p 71468 >> temp.txt
 	sleep 10; 
 done
 
