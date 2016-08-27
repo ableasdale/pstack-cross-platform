@@ -29,7 +29,7 @@ fi
 
 # default argument check
 if [[ -z $1 ]]; then
-	box_out 'Usage: ./ml-support-dump.sh \[running time in seconds\]' 'This script will run for the default ${green}180${reset} seconds'
+	box_out 'Usage: ./ml-support-dump.sh [running time in seconds]' 'This script will run for the default 180 seconds'
 fi
 
 # global vars
@@ -37,9 +37,8 @@ TSTAMP=`date +"%H%M%S-%m-%d-%Y"`
 INTERVAL=5
 TIME=${1:-180}
 
-
 # main
-echo pstack script started at: `date` - running for \(approximately\) $TIME seconds
+echo pstack script started at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds on ${red}$OSTYPE${reset}
 mkdir /tmp/$TSTAMP
 # VM, IOStat and PMAP:
 date | tee -a >> /tmp/$TSTAMP/pmap.log >> /tmp/$TSTAMP/iostat.log >> /tmp/$TSTAMP/vmstat.log
