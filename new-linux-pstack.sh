@@ -10,13 +10,12 @@ fi
 if [[ -z $1 ]]; then
 	echo Usage: ./ml-support-dump.sh \[running time in seconds\]
 	echo This script will run for the default 180 seconds
-	$1=180
-	exit 1
 fi
 
 # global vars
 TSTAMP=`date +"%H%M%S-%m-%d-%Y"`
-INTERVAL=5 TIME=$1
+INTERVAL=5
+TIME=${1:-180}
 
 # main
 echo pstack script started at: `date` - running for approximately $TIME seconds
