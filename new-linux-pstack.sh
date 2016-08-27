@@ -9,30 +9,35 @@ fi
 # default argument check
 if [[ -z $1 ]]; then
 	echo Usage: ./ml-support-dump.sh \[running time in seconds\]
-	echo e.g. ./ml-support-dump.sh 180 \(runs the application for 3 minutes before closing\)
+	echo This script will run for the default 180 seconds
+	$1=180
 	exit 1
 fi
 
 # global vars
 TSTAMP=`date +"%H%M%S-%m-%d-%Y"`
-INTERVAL=7 TIME=$1
+INTERVAL=5 TIME=$1
 
 # main
-echo pstack script started at: $TSTAMP - running for approximately $TIME seconds
-echo `date`
+echo pstack script started at: `date` - running for approximately $TIME seconds
 mkdir /tmp/$TSTAMP
 
+date | tee -a >> /tmp/$TSTAMP/pmap.log >> /tmp/$TSTAMP/iostat.log >> /tmp/$TSTAMP/vmstat.log
+iostat 2 25 >> /tmp/$TSTAMP/iostat.log &
+vmstat 2 25 >> /tmp/$TSTAMP/vmstat.log &
+service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
+
 while [ $TIME -gt 0 ]; do
-	date | tee -a /tmp/$TSTAMP/pstack.log >> /tmp/$TSTAMP/pstack-summary.log >> /tmp/$TSTAMP/pmap.log >> /tmp/$TSTAMP/iostat.log >> /tmp/$TSTAMP/vmstat.log
-	iostat 2 5 >> /tmp/$TSTAMP/iostat.log &
-    vmstat 2 5 >> /tmp/$TSTAMP/vmstat.log &
+    date | tee -a /tmp/$TSTAMP/pstack.log >> /tmp/$TSTAMP/pstack-summary.log
 	service MarkLogic pstack | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
-    service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
 	#pause and update stdout to show some progress
     sleep $INTERVAL
     echo -e ". \c"
     let TIME-=$INTERVAL
 done
+
+date | tee -a >> /tmp/$TSTAMP/pmap.log
+service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
 echo "CPU statistics [sar -u ALL]" >> /tmp/$TSTAMP/sar-summary.log
 sar -u ALL >> /tmp/$TSTAMP/sar-summary.log
 echo "CPU individual core statistics [sar -P ALL]" >> /tmp/$TSTAMP/sar-summary.log
