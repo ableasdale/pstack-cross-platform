@@ -4,6 +4,8 @@ red=`tput setaf 1`
 green=`tput setaf 2`
 reset=`tput sgr0`
 
+# pidof MarkLogic returns 2 pids - figure out the correct one...
+
 function box_out()
 {
   local s=("$@") b w
@@ -11,13 +13,11 @@ function box_out()
     ((w<${#l})) && { b="$l"; w="${#l}"; }
   done
   tput setaf 3
-  echo "╔═${b//?/═}═╗
-║ ${b//?/ } ║"
+  echo -e "╔═${b//?/═}═╗\n║ ${b//?/ } ║"
   for l in "${s[@]}"; do
     printf '║ %s%*s%s ║\n' "$(tput setaf 4)" "-$w" "$l" "$(tput setaf 3)"
   done
-  echo "║ ${b//?/ } ║
-╚═${b//?/═}═╝"
+  echo -e "║ ${b//?/ } ║\n╚═${b//?/═}═╝"
   tput sgr 0
 }
 
@@ -40,6 +40,14 @@ TIME=${1:-180}
 # main
 echo pstack script started at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds on ${red}$OSTYPE${reset}
 mkdir /tmp/$TSTAMP
+# Debugging code..
+if [[ $OSTYPE == linux-gnu* ]]
+then
+    echo "Linux Detected"
+else
+    echo "Guessing this is a mac?"
+fi
+
 # VM, IOStat and PMAP:
 date | tee -a >> /tmp/$TSTAMP/pmap.log >> /tmp/$TSTAMP/iostat.log >> /tmp/$TSTAMP/vmstat.log
 iostat 2 25 >> /tmp/$TSTAMP/iostat.log &
@@ -48,7 +56,13 @@ service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
 # PStacks for MarkLogic process
 while [ $TIME -gt 0 ]; do
     date | tee -a /tmp/$TSTAMP/pstack.log >> /tmp/$TSTAMP/pstack-summary.log
-	service MarkLogic pstack | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
+    if [[ $OSTYPE == linux-gnu* ]]
+    then
+	    service MarkLogic pstack | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
+	else
+	    # TODO - pid hardcoded! :S
+        lldb -o "thread backtrace all" --batch -p 71468 | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
+	fi
 	#pause and update stdout to show some progress
     sleep $INTERVAL
     echo -e ". \c"
