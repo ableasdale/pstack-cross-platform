@@ -49,13 +49,13 @@ function sar_collect()
 
 # root check
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 1>&2
-   exit 1
+    echo "This script must be run as root" 1>&2
+    exit 1
 fi
 
 # default argument check
 if [[ -z $1 ]]; then
-	box_out 'Usage: ./ml-support-dump.sh [running time in seconds]' 'This script will run for the default 180 seconds' 'Please ensure sar is configured correctly'
+    box_out 'Usage: ./ml-support-dump.sh [running time in seconds]' 'This script will run for the default 180 seconds' 'Please ensure sar is configured correctly'
 fi
 
 # global vars
@@ -66,21 +66,15 @@ PIDS=(`pidof MarkLogic`)
 PID=${PIDS[1]}
 
 # main
-echo pstack script started at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds on ${red}$OSTYPE${reset}. The MarkLogic pid is ${green}$PID${reset}
+echo pstack script started at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds. MarkLogic pid is ${green}$PID${reset}
 mkdir /tmp/$TSTAMP
-# Debugging code..
-#if [[ $OSTYPE == linux-gnu* ]]
-#then
-#    echo "Linux Detected"
-#else
-#    echo "Guessing this is a mac?"
-#fi
 
 # VM, IOStat and PMAP:
 date | tee -a >> /tmp/$TSTAMP/pmap.log >> /tmp/$TSTAMP/iostat.log >> /tmp/$TSTAMP/vmstat.log
 
 if [[ $OSTYPE == linux-gnu* ]]
 then
+    echo -e "GNU/Linux Detected (${red}$OSTYPE${reset})"
     iostat 2 25 >> /tmp/$TSTAMP/iostat.log &
     vmstat 2 25 >> /tmp/$TSTAMP/vmstat.log &
     service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
@@ -94,9 +88,9 @@ then
     date | tee -a >> /tmp/$TSTAMP/pmap.log
     service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
     sar_collect
-else
-    # For now - we'll just assume it's not linux, so it's OS X :S
-    # TODO - elif darwin? else "not supported"
+elif [[ $OSTYPE == darwin* ]]
+then
+    echo -e "Running on OS X (${red}$OSTYPE${reset})"
     # OS X: vm_stat -c 25 2 iostat -c 25 2
     hostinfo >> /tmp/$TSTAMP/hostinfo.log
     iostat -c 25 2 >> /tmp/$TSTAMP/iostat.log &
@@ -113,6 +107,9 @@ else
     date | tee -a >> /tmp/$TSTAMP/pmap.log
     vmmap $PID >> /tmp/$TSTAMP/pmap.log
     # TODO - sar on OSX - it needs to be set up and tested on my mac...
+else
+    echo Sorry - not sure what OS you are using
+    exit 1
 fi
 
 # for s in ${PIDS[@]}; do
