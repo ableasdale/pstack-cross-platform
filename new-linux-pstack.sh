@@ -2,6 +2,8 @@
 
 red=`tput setaf 1`
 green=`tput setaf 2`
+yellow=`tput setaf 3`
+blue=`tput setaf 4`
 reset=`tput sgr0`
 
 # pidof MarkLogic returns 2 pids - figure out the correct one...
@@ -12,10 +14,9 @@ function box_out()
   for l in "${s[@]}"; do
     ((w<${#l})) && { b="$l"; w="${#l}"; }
   done
-  tput setaf 3
-  echo -e "╔═${b//?/═}═╗\n║ ${b//?/ } ║"
+  echo -e "${yellow}╔═${b//?/═}═╗\n║ ${b//?/ } ║"
   for l in "${s[@]}"; do
-    printf '║ %s%*s%s ║\n' "$(tput setaf 4)" "-$w" "$l" "$(tput setaf 3)"
+    printf '║ %s%*s%s ║\n' "${blue}" "-$w" "$l" "${yellow}"
   done
   echo -e "║ ${b//?/ } ║\n╚═${b//?/═}═╝"
   tput sgr 0
@@ -29,40 +30,56 @@ fi
 
 # default argument check
 if [[ -z $1 ]]; then
-	box_out 'Usage: ./ml-support-dump.sh [running time in seconds]' 'This script will run for the default 180 seconds'
+	box_out 'Usage: ./ml-support-dump.sh [running time in seconds]' 'This script will run for the default 180 seconds' 'Please ensure sar is configured correctly'
 fi
 
 # global vars
 TSTAMP=`date +"%H%M%S-%m-%d-%Y"`
 INTERVAL=5
 TIME=${1:-180}
+PIDS=(`pidof MarkLogic`)
+PID=${PIDS[1]}
 
 # main
-echo pstack script started at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds on ${red}$OSTYPE${reset}
+echo pstack script started at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds on ${red}$OSTYPE${reset}. The MarkLogic pid is ${green}$PID${reset}
 mkdir /tmp/$TSTAMP
 # Debugging code..
-if [[ $OSTYPE == linux-gnu* ]]
-then
-    echo "Linux Detected"
-else
-    echo "Guessing this is a mac?"
-fi
+#if [[ $OSTYPE == linux-gnu* ]]
+#then
+#    echo "Linux Detected"
+#else
+#    echo "Guessing this is a mac?"
+#fi
 
 # VM, IOStat and PMAP:
 date | tee -a >> /tmp/$TSTAMP/pmap.log >> /tmp/$TSTAMP/iostat.log >> /tmp/$TSTAMP/vmstat.log
-iostat 2 25 >> /tmp/$TSTAMP/iostat.log &
-vmstat 2 25 >> /tmp/$TSTAMP/vmstat.log &
-service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
+
+if [[ $OSTYPE == linux-gnu* ]]
+then
+    iostat 2 25 >> /tmp/$TSTAMP/iostat.log &
+    vmstat 2 25 >> /tmp/$TSTAMP/vmstat.log &
+    service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
+else
+    # OS X: vm_stat -c 25 2 iostat -c 25 2
+    iostat -c 25 2 >> /tmp/$TSTAMP/iostat.log &
+    vm_stat -c 25 2 >> /tmp/$TSTAMP/vmstat.log &
+    # TODO - pmap for PSX?
+fi
+
+# for s in ${PIDS[@]}; do
+
 # PStacks for MarkLogic process
 while [ $TIME -gt 0 ]; do
+
     date | tee -a /tmp/$TSTAMP/pstack.log >> /tmp/$TSTAMP/pstack-summary.log
     if [[ $OSTYPE == linux-gnu* ]]
     then
-	    service MarkLogic pstack | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
-	else
-	    # TODO - pid hardcoded! :S
-        lldb -o "thread backtrace all" --batch -p 71468 | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
-	fi
+        gdb -ex "set pagination 0" -ex "thread apply all bt" -batch -p $PID | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
+        # TODO - OR service MarkLogic pstack?  Maybe check for presence of pstack??
+    else
+        lldb -o "thread backtrace all" --batch -p $PID | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
+    fi
+
 	#pause and update stdout to show some progress
     sleep $INTERVAL
     echo -e ". \c"
