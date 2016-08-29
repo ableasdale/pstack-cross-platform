@@ -102,8 +102,9 @@ then
     vm_stat -c 25 2 >> /tmp/$TSTAMP/vmstat.log &
     # pmap for OS X:
     vmmap $PID >> /tmp/$TSTAMP/pmap.log
+    # TODO - the pstack summary is different for OS X
     while [ $TIME -gt 0 ]; do
-        lldb -o "thread backtrace all" --batch -p $PID | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
+        lldb -o "thread backtrace all" --batch -p $PID | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^thread/ { print s; s = ""; } /^\#frame/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
         sleep $INTERVAL
         echo -e ". \c"
         let TIME-=$INTERVAL
