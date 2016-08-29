@@ -67,7 +67,7 @@ fi
 
 # default argument check
 if [[ -z $1 ]]; then
-    box_out 'Usage: ./ml-support-dump.sh [running time in seconds]' 'This script will run for the default 180 seconds' 'Please ensure sar is configured correctly'
+    box_out 'Usage: ./pstack-movie.sh [running time in seconds]' 'Version 1.1 (29th August 2016)' 'For OS X and Linux' 'This script will run for the default 180 seconds' 'Please ensure sar is configured correctly'
 fi
 
 # main
@@ -116,36 +116,6 @@ else
     echo Sorry - not sure what OS you are using
     exit 1
 fi
-
-# for s in ${PIDS[@]}; do
-
-# PStacks for MarkLogic process
-#while [ $TIME -gt 0 ]; do
-#
-#    date | tee -a /tmp/$TSTAMP/pstack.log >> /tmp/$TSTAMP/pstack-summary.log
-#    if [[ $OSTYPE == linux-gnu* ]]
-#    then
-#        service MarkLogic pstack | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
-#        # TODO - OR gdb -ex "set pagination 0" -ex "thread apply all bt" -batch -p $PID
-#    else
-#        lldb -o "thread backtrace all" --batch -p $PID | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
-#    fi
-#
-#	#pause and update stdout to show some progress
-#    sleep $INTERVAL
-#    echo -e ". \c"
-#    let TIME-=$INTERVAL
-#done
-## PMAP For MarkLogic process
-#date | tee -a >> /tmp/$TSTAMP/pmap.log
-#service MarkLogic pmap >> /tmp/$TSTAMP/pmap.log
-
-#if hash gdate 2>/dev/null; then
-#    gdate "$@"
-#else
-#    date "$@"
-#fi
-
 
 echo completed
 echo `date`
