@@ -6,12 +6,29 @@ TODO - validate steps from clean installations in both cases.
 
 ## Setup (Linux [RHEL / CentOS])
 
+Install the sysstat package
+
 ```bash
 sudo yum -y install sysstat
 ```
 
+Enable sysstat at startup and start the service
+
 ```bash
 chkconfig sysstat on && service sysstat start
+```
+
+Edit the crontab (sudo crontab -e) or:
+
+```bash
+sudo vi /etc/cron.d/sysstat
+```
+
+Add the following
+
+```bash
+*/10 * * * * root /usr/local/lib/sa/sa1 1 1
+53 23 * * * root /usr/local/lib/sa/sa2 -A
 ```
 
 ## Setup (OS X)
