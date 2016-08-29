@@ -19,9 +19,9 @@ function box_out()
     for l in "${s[@]}"; do
     ((w<${#l})) && { b="$l"; w="${#l}"; }
     done
-    echo -e "${yellow}╔═${b//?/═}═╗\n║ ${b//?/ } ║"
+    echo -e "${blue}╔═${b//?/═}═╗\n║ ${b//?/ } ║"
     for l in "${s[@]}"; do
-    printf '║ %s%*s%s ║\n' "${blue}" "-$w" "$l" "${yellow}"
+    printf '║ %s%*s%s ║\n' "${reset}" "-$w" "$l" "${blue}"
     done
     echo -e "║ ${b//?/ } ║\n╚═${b//?/═}═╝"
     tput sgr 0
@@ -54,7 +54,7 @@ function sar_collect()
         sar -n ALL >> /tmp/$TSTAMP/sar-summary.log
     else
         # OSX Sar
-        sar -A -o /tmp/$TSTAMP/sar-summary.log
+        sar -A >> /tmp/$TSTAMP/sar-summary.log
     fi
 
 }
@@ -67,11 +67,11 @@ fi
 
 # default argument check
 if [[ -z $1 ]]; then
-    box_out 'Usage: ./pstack-movie.sh [running time in seconds]' 'Version 1.1 (29th August 2016)' 'For OS X and Linux' 'This script will run for the default 180 seconds' 'Please ensure sar is configured correctly'
+    box_out 'Usage: ./pstack-movie.sh [running time in seconds]' '' 'Version 1.1 (29th August 2016) for OS X and Linux' 'This script will run for the default 180 seconds' 'Please ensure sar is configured correctly on your host'
 fi
 
 # main
-echo pstack script started at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds. MarkLogic pid is ${green}$PID${reset}
+echo Script started on ${yellow}$HOSTNAME${reset} at: ${green}`date`${reset} - running for \(approximately\) ${green}$TIME${reset} seconds. MarkLogic pid is ${green}$PID${reset}
 mkdir /tmp/$TSTAMP
 
 # VM, IOStat and PMAP:
@@ -104,16 +104,16 @@ then
     vmmap $PID >> /tmp/$TSTAMP/pmap.log
     while [ $TIME -gt 0 ]; do
         lldb -o "thread backtrace all" --batch -p $PID | tee -a /tmp/$TSTAMP/pstack.log | awk 'BEGIN { s = ""; } /^Thread/ { print s; s = ""; } /^\#/ { if (s != "" ) { s = s "," $4} else { s = $4 } } END { print s }' | sort | uniq -c | sort -r -n -k 1,1 >> /tmp/$TSTAMP/pstack-summary.log
-        # TODO - OR service MarkLogic pstack?  Maybe check for presence of pstack??
         sleep $INTERVAL
         echo -e ". \c"
         let TIME-=$INTERVAL
     done
     date | tee -a >> /tmp/$TSTAMP/pmap.log
     vmmap $PID >> /tmp/$TSTAMP/pmap.log
+    sar_collect
     # TODO - sar on OSX - it needs to be set up and tested on my mac...
 else
-    echo Sorry - not sure what OS you are using
+    echo -e "Sorry - not sure what OS you are using ($OSTYPE)"
     exit 1
 fi
 
